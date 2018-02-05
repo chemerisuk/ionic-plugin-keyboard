@@ -9,10 +9,12 @@ import org.apache.cordova.PluginResult.Status;
 import org.json.JSONArray;
 import org.json.JSONException;
 
+import android.util.Log;
 import android.content.Context;
 import android.graphics.Rect;
 import android.util.DisplayMetrics;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.inputmethod.InputMethodManager;
 
@@ -23,11 +25,7 @@ import android.os.Build;
 
 public class IonicKeyboard extends CordovaPlugin {
     private OnGlobalLayoutListener list;
-    private View rootView;
-
-    public void initialize(CordovaInterface cordova, CordovaWebView webView) {
-        super.initialize(cordova, webView);
-    }
+    private ViewTreeObserver treeObserver;
 
     public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
         if ("close".equals(action)) {
@@ -66,7 +64,10 @@ public class IonicKeyboard extends CordovaPlugin {
                     final float density = dm.density;
 
                     //http://stackoverflow.com/a/4737265/1091751 detect if keyboard is showing
-                    rootView = cordova.getActivity().getWindow().getDecorView().findViewById(android.R.id.content).getRootView();
+                    final View rootView = cordova.getActivity().getWindow().getDecorView().findViewById(android.R.id.content).getRootView();
+
+                    treeObserver = rootView.getViewTreeObserver();
+
                     list = new OnGlobalLayoutListener() {
                         int previousHeightDiff = 0;
                         @Override
@@ -113,7 +114,7 @@ public class IonicKeyboard extends CordovaPlugin {
                          }
                     };
 
-                    rootView.getViewTreeObserver().addOnGlobalLayoutListener(list);
+                    treeObserver.addOnGlobalLayoutListener(list);
 
 
                     PluginResult dataResult = new PluginResult(PluginResult.Status.OK);
@@ -128,9 +129,9 @@ public class IonicKeyboard extends CordovaPlugin {
 
     @Override
     public void onDestroy() {
-        rootView.getViewTreeObserver().removeOnGlobalLayoutListener(list);
+        if (treeObserver != null) {
+            treeObserver.removeOnGlobalLayoutListener(list);
+        }
     }
 
 }
-
-
