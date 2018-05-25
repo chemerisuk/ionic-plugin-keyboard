@@ -6,7 +6,7 @@
 
 @synthesize hideKeyboardAccessoryBar = _hideKeyboardAccessoryBar;
 @synthesize disableScroll = _disableScroll;
-//@synthesize styleDark = _styleDark;
+static UIKeyboardAppearance _keyboardStyle;
 
 - (void)pluginInitialize {
 
@@ -19,12 +19,11 @@
     nilImp = imp_implementationWithBlock(^(id _s) {
         return nil;
     });
-    
+
     //set defaults
     self.hideKeyboardAccessoryBar = YES;
     self.disableScroll = NO;
-    //self.styleDark = NO;
-    
+
     NSNotificationCenter* nc = [NSNotificationCenter defaultCenter];
     __weak IonicKeyboard* weakSelf = self;
     _keyboardShowObserver = [nc addObserverForName:UIKeyboardWillShowNotification
@@ -91,29 +90,9 @@
         method_setImplementation(wkMethod, wkOriginalImp);
         method_setImplementation(uiMethod, uiOriginalImp);
     }
-    
+
     _hideKeyboardAccessoryBar = hideKeyboardAccessoryBar;
 }
-
-/*
-- (BOOL)styleDark {
-    return _styleDark;
-}
-
-- (void)setStyleDark:(BOOL)styleDark {
-    if (styleDark == _styleDark) {
-        return;
-    }
-    if (styleDark) {
-        self.webView.styleDark = YES;
-    }
-    else {
-        self.webView.styleDark = NO;
-    }
-
-    _styleDark = styleDark;
-}
-*/
 
 
 /* ------------------------------------------------------------- */
@@ -161,16 +140,41 @@
     NSLog(@"Showing keyboard not supported in iOS due to platform limitations.");
 }
 
-/*
+- (UIKeyboardAppearance)keyboardAppearance {
+    return _keyboardStyle;
+}
+
 - (void) styleDark:(CDVInvokedUrlCommand*)command {
     if (!command.arguments || ![command.arguments count]){
       return;
     }
     id value = [command.arguments objectAtIndex:0];
+    if ([value boolValue]) {
+        _keyboardStyle = UIKeyboardAppearanceDark;
+    } else {
+        _keyboardStyle = UIKeyboardAppearanceLight;
+    }
 
-    self.styleDark = [value boolValue];
+    [self registerKeyboardAppearance];
 }
-*/
+
+- (void)registerKeyboardAppearance {
+    for (UIView *view in [[self.webView scrollView] subviews]) {
+        if([[view.class description] containsString:@"WKContent"]) {
+            UIView *content = view;
+            NSString *className = [NSString stringWithFormat:@"%@_%@",[[content class] superclass],[self class]];
+            Class newClass = NSClassFromString(className);
+            if (!newClass) {
+                newClass = objc_allocateClassPair([content class], [className cStringUsingEncoding:NSASCIIStringEncoding], 0);
+                Method method = class_getInstanceMethod([self class], @selector(keyboardAppearance));
+                class_addMethod(newClass, @selector(keyboardAppearance), method_getImplementation(method), method_getTypeEncoding(method));
+                objc_registerClassPair(newClass);
+            }
+            object_setClass(content, newClass);
+            return;
+        }
+    }
+}
 
 @end
 
