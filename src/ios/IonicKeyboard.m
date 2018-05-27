@@ -23,6 +23,8 @@ static UIKeyboardAppearance _keyboardStyle;
     //set defaults
     self.hideKeyboardAccessoryBar = YES;
     self.disableScroll = NO;
+    // disable Shake to Undo gesture
+    [UIApplication sharedApplication].applicationSupportsShakeToEdit = NO;
 
     NSNotificationCenter* nc = [NSNotificationCenter defaultCenter];
     __weak IonicKeyboard* weakSelf = self;
